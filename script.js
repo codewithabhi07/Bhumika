@@ -7,7 +7,67 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!loadBillData()) {
         addRow(); // Add one initial row if no saved data
     }
+    
+    // Load images
+    const savedLogo = localStorage.getItem('bhumi_logo');
+    if (savedLogo) {
+        document.getElementById('logo-permanent').src = savedLogo;
+    }
+    
+    const savedSig = localStorage.getItem('bhumi_sig');
+    if (savedSig) {
+        const sigPreview = document.getElementById('sig-preview');
+        sigPreview.src = savedSig;
+        sigPreview.style.display = 'block';
+    }
 });
+
+function toggleSettings() {
+    document.querySelector('.settings-panel').classList.toggle('active');
+}
+
+function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('theme-btn');
+    if (body.classList.contains('light-theme')) {
+        body.classList.replace('light-theme', 'dark-theme');
+        btn.innerText = 'Switch to Light';
+    } else {
+        body.classList.replace('dark-theme', 'light-theme');
+        btn.innerText = 'Switch to Dark';
+    }
+}
+
+function handleFileUpload(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        localStorage.setItem(`bhumi_${type}`, base64);
+        if (type === 'logo') {
+            document.getElementById('logo-permanent').src = base64;
+        } else {
+            const preview = document.getElementById(`${type}-preview`);
+            preview.src = base64;
+            preview.style.display = 'block';
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImage(type) {
+    localStorage.removeItem(`bhumi_${type}`);
+    if (type === 'logo') {
+        document.getElementById('logo-permanent').src = 'logo.png';
+    } else {
+        const preview = document.getElementById(`${type}-preview`);
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    document.getElementById(`${type}-upload`).value = '';
+}
 
 function setCurrentDate() {
     const today = new Date();
@@ -59,7 +119,6 @@ function addRow(data = null) {
     saveBillData();
 }
 
-// Keyboard Navigation
 document.getElementById('bill-table').addEventListener('keydown', function(e) {
     const active = document.activeElement;
     if (active.tagName !== 'INPUT') return;
@@ -121,13 +180,11 @@ document.getElementById('bill-table').addEventListener('keydown', function(e) {
 });
 
 function deleteRow(button) {
-    if (confirm('Delete this item?')) {
-        const row = button.parentNode.parentNode;
-        row.parentNode.removeChild(row);
-        updateSerialNumbers();
-        calculateGrandTotal();
-        saveBillData();
-    }
+    const row = button.parentNode.parentNode;
+    row.parentNode.removeChild(row);
+    updateSerialNumbers();
+    calculateGrandTotal();
+    saveBillData();
 }
 
 function updateSerialNumbers() {
@@ -139,12 +196,28 @@ function updateSerialNumbers() {
 
 function roundSqFt(value) {
     if (!value || isNaN(value)) return 0;
+    
     let integerPart = Math.floor(value);
     let decimalPart = Math.round((value - integerPart) * 100) / 100;
 
-    if (decimalPart === 0) return integerPart;
-    if (decimalPart > 0 && decimalPart < 0.50) return integerPart + 0.5;
-    return integerPart + 1.0;
+    if (decimalPart === 0) {
+        return integerPart;
+    } else if (decimalPart >= 0.01 && decimalPart <= 0.24) {
+        return integerPart + 0.25;
+    } else if (decimalPart === 0.25) {
+        return integerPart + 0.25;
+    } else if (decimalPart >= 0.26 && decimalPart <= 0.49) {
+        return integerPart + 0.50;
+    } else if (decimalPart === 0.50) {
+        return integerPart + 0.50;
+    } else if (decimalPart >= 0.51 && decimalPart <= 0.74) {
+        return integerPart + 0.75;
+    } else if (decimalPart === 0.75) {
+        return integerPart + 0.75;
+    } else {
+        // Covers 0.76 to 0.99
+        return integerPart + 1.00;
+    }
 }
 
 function calculateSqFtFormula(length, width, quantity) {
@@ -189,28 +262,52 @@ function calculateRow(input) {
 function calculateGrandTotal() {
     const amounts = document.querySelectorAll('.amount-cell');
     let subTotal = 0;
+    amounts.forEach(cell => { subTotal += parseFloat(cell.innerText) || 0; });
+
+    const gstType = document.getElementById('gst-type').value;
+    const gstRate = parseFloat(document.getElementById('gst-rate').value);
     
-    amounts.forEach(cell => {
-        subTotal += parseFloat(cell.innerText) || 0;
-    });
+    let gstTotal = 0;
+    const gstRows = document.getElementById('gst-rows');
+    const sgstRow = document.getElementById('sgst-row');
+    const cgstRow = document.getElementById('cgst-row');
+    const igstRow = document.getElementById('igst-row');
+
+    if (gstType === 'none') {
+        gstRows.style.display = 'none';
+    } else {
+        gstRows.style.display = 'block';
+        gstTotal = (subTotal * gstRate) / 100;
+        
+        if (gstType === 'sgst_cgst') {
+            sgstRow.style.display = 'flex';
+            cgstRow.style.display = 'flex';
+            igstRow.style.display = 'none';
+            const halfGst = gstTotal / 2;
+            document.getElementById('sgst-percent').innerText = gstRate / 2;
+            document.getElementById('cgst-percent').innerText = gstRate / 2;
+            document.getElementById('sgst-amount').innerText = halfGst.toFixed(2);
+            document.getElementById('cgst-amount').innerText = halfGst.toFixed(2);
+        } else {
+            sgstRow.style.display = 'none';
+            cgstRow.style.display = 'none';
+            igstRow.style.display = 'flex';
+            document.getElementById('igst-percent').innerText = gstRate;
+            document.getElementById('igst-amount').innerText = gstTotal.toFixed(2);
+        }
+    }
 
     const discount = parseFloat(document.getElementById('discount-amount').value) || 0;
     const paidAmount = parseFloat(document.getElementById('paid-amount').value) || 0;
     
-    const grandTotalRaw = subTotal - discount;
+    const grandTotalRaw = subTotal + gstTotal - discount;
     const grandTotal = Math.round(grandTotalRaw);
     const balance = grandTotal - paidAmount;
 
-    const subTotalEl = document.getElementById('sub-total');
-    const grandTotalEl = document.getElementById('grand-total');
-    const balanceAmountEl = document.getElementById('balance-amount');
-    const amountWordsEl = document.getElementById('amount-words');
-
-    if (subTotalEl) subTotalEl.innerText = subTotal.toFixed(2);
-    if (grandTotalEl) grandTotalEl.innerText = grandTotal.toFixed(2);
-    if (balanceAmountEl) balanceAmountEl.innerText = balance.toFixed(2);
-    
-    if (amountWordsEl) amountWordsEl.innerText = numberToWords(grandTotal) + " Rupees Only";
+    document.getElementById('sub-total').innerText = subTotal.toFixed(2);
+    document.getElementById('grand-total').innerText = grandTotal.toFixed(2);
+    document.getElementById('balance-amount').innerText = balance.toFixed(2);
+    document.getElementById('amount-words').innerText = numberToWords(grandTotal) + " Rupees Only";
     saveBillData();
 }
 
@@ -219,9 +316,8 @@ function numberToWords(amount) {
     const words = {
         0: '', 1: 'One', 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five', 6: 'Six', 7: 'Seven', 8: 'Eight', 9: 'Nine',
         10: 'Ten', 11: 'Eleven', 12: 'Twelve', 13: 'Thirteen', 14: 'Fourteen', 15: 'Fifteen', 16: 'Sixteen', 17: 'Seventeen', 18: 'Eighteen', 19: 'Nineteen',
-        20: 'Twenty', 30: 'Thirty', 40: 'Forty', 50: 'Fifty', 60: 'Sixty', 70: 'Seventy', 80: 'Eighty', 90: 'Ninety'
+        20: 'Twenty', 30: 'Thirty', 40: 'Forty', 50: 'Five', 60: 'Sixty', 70: 'Seventy', 80: 'Eighty', 90: 'Ninety'
     };
-
     function convert(n) {
         if (n < 20) return words[n];
         if (n < 100) return words[Math.floor(n / 10) * 10] + (n % 10 !== 0 ? " " + words[n % 10] : "");
@@ -230,8 +326,24 @@ function numberToWords(amount) {
         if (n < 10000000) return convert(Math.floor(n / 100000)) + " Lakh" + (n % 100000 !== 0 ? " " + convert(n % 100000) : "");
         return convert(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 !== 0 ? " " + convert(n % 10000000) : "");
     }
-
     return convert(Math.round(amount));
+}
+
+function shareToWhatsApp() {
+    const name = document.getElementById('customer-name').value || 'Customer';
+    const total = document.getElementById('grand-total').innerText;
+    const balance = document.getElementById('balance-amount').innerText;
+    const estNo = document.getElementById('est-number').innerText;
+    
+    let text = `*Estimate from Bhumika Plywood*\n`;
+    text += `Est No: ${estNo}\n`;
+    text += `Customer: ${name}\n`;
+    text += `Total Amount: ₹${total}\n`;
+    text += `Balance: ₹${balance}\n`;
+    text += `Thank you for your business!`;
+    
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
 }
 
 function saveBillData() {
@@ -240,13 +352,13 @@ function saveBillData() {
         mobileNumber: document.getElementById('mobile-number').value,
         discount: document.getElementById('discount-amount').value,
         paidAmount: document.getElementById('paid-amount').value,
+        gstType: document.getElementById('gst-type').value,
+        gstRate: document.getElementById('gst-rate').value,
         items: []
     };
-
-    const rows = document.querySelectorAll('#bill-body tr');
-    rows.forEach(row => {
+    document.querySelectorAll('#bill-body tr').forEach(row => {
         data.items.push({
-            particular: row.querySelector('td:nth-child(2) input').value,
+            particular: row.querySelector('.particular-input').value,
             size: row.querySelector('.size-input').value,
             qty: row.querySelector('.qty-input').value,
             sqft: row.querySelector('.sqft-input').value,
@@ -254,23 +366,22 @@ function saveBillData() {
             amount: row.querySelector('.amount-cell').innerText
         });
     });
-
-    localStorage.setItem('bhumi_bill_data_v2', JSON.stringify(data));
+    localStorage.setItem('bhumi_bill_data_v3', JSON.stringify(data));
 }
 
 function loadBillData() {
-    const saved = localStorage.getItem('bhumi_bill_data_v2');
+    const saved = localStorage.getItem('bhumi_bill_data_v3');
     if (!saved) return false;
-
     const data = JSON.parse(saved);
     document.getElementById('customer-name').value = data.customerName || '';
     document.getElementById('mobile-number').value = data.mobileNumber || '';
     document.getElementById('discount-amount').value = data.discount || 0;
     document.getElementById('paid-amount').value = data.paidAmount || 0;
+    if (data.gstType) document.getElementById('gst-type').value = data.gstType;
+    if (data.gstRate) document.getElementById('gst-rate').value = data.gstRate;
 
     const tableBody = document.getElementById('bill-body');
-    if (tableBody) tableBody.innerHTML = '';
-    
+    tableBody.innerHTML = '';
     if (data.items && data.items.length > 0) {
         data.items.forEach(item => addRow(item));
         calculateGrandTotal();
@@ -280,13 +391,12 @@ function loadBillData() {
 }
 
 function clearBill() {
-    if (confirm('Are you sure you want to clear the entire bill?')) {
-        localStorage.removeItem('bhumi_bill_data_v2');
+    if (confirm('Clear entire bill?')) {
+        localStorage.removeItem('bhumi_bill_data_v3');
         location.reload();
     }
 }
 
-// Global listener for manual Sqft edits
 document.getElementById('bill-table').addEventListener('blur', function(e) {
     if (e.target.classList.contains('sqft-input')) {
         const value = parseFloat(e.target.value);

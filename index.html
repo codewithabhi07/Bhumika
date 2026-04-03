@@ -6,7 +6,50 @@
     <title>Bhumika Plywood Estimate</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body class="light-theme">
+    <!-- Configuration Panel (No-Print) -->
+    <aside class="settings-panel no-print">
+        <div class="settings-header">
+            <h3>App Settings</h3>
+            <button class="toggle-settings" onclick="toggleSettings()">×</button>
+        </div>
+        <div class="settings-body">
+            <div class="setting-item">
+                <label>Company Logo:</label>
+                <input type="file" id="logo-upload" accept="image/*" onchange="handleFileUpload(this, 'logo')">
+                <button class="clear-img-btn" onclick="clearImage('logo')">Remove Logo</button>
+            </div>
+            <div class="setting-item">
+                <label>Auth. Signature:</label>
+                <input type="file" id="sig-upload" accept="image/*" onchange="handleFileUpload(this, 'sig')">
+                <button class="clear-img-btn" onclick="clearImage('sig')">Remove Sig.</button>
+            </div>
+            <div class="setting-item">
+                <label>GST Billing:</label>
+                <select id="gst-type" onchange="calculateGrandTotal()">
+                    <option value="none">No GST</option>
+                    <option value="sgst_cgst">SGST + CGST (Local)</option>
+                    <option value="igst">IGST (Interstate)</option>
+                </select>
+                <select id="gst-rate" onchange="calculateGrandTotal()">
+                    <option value="5">5%</option>
+                    <option value="12">12%</option>
+                    <option value="18" selected>18%</option>
+                    <option value="28">28%</option>
+                </select>
+            </div>
+            <div class="setting-item">
+                <label>Theme:</label>
+                <button onclick="toggleTheme()" id="theme-btn">Switch to Dark</button>
+            </div>
+            <div class="setting-item">
+                <button class="whatsapp-btn" onclick="shareToWhatsApp()">Share to WhatsApp</button>
+            </div>
+        </div>
+    </aside>
+
+    <button class="open-settings no-print" onclick="toggleSettings()">⚙ Settings</button>
+
     <!-- Screen Controls -->
     <div class="container-controls no-print">
         <div class="control-group">
@@ -23,16 +66,18 @@
         <!-- Header -->
         <header>
             <div class="header-main">
-                <div class="business-brand">
-                    <h1>Bhumika Plywood & Building Material</h1>
-                    <div class="location-tag">Location: Parola</div>
-                    <div class="contact-details">
-                        <span>Phone: <strong>9420665955</strong></span> | 
-                        <span>Manager: <strong>Rohit Chavan</strong></span>
+                <div class="brand-section">
+                    <img id="logo-permanent" src="logo.png" alt="Bhumika Plywood Logo" class="main-logo">
+                    <div class="business-brand">
+                        <h1>Bhumika Plywood & Building Material</h1>
+                        <div class="location-tag">Location: Parola</div>
+                        <div class="contact-details">
+                            <span>Phone: <strong>9420665955</strong></span> | 
+                            <span>Manager: <strong>Rohit Chavan</strong></span>
+                        </div>
                     </div>
                 </div>
-                <div class="bill-meta">
-                    <div class="bill-title">ESTIMATE BILL</div>
+                <div class="bill-meta-container">
                     <div class="meta-info">
                         <div class="meta-item">
                             <span class="label">Est No:</span>
@@ -42,6 +87,9 @@
                             <span class="label">Date:</span>
                             <span class="value" id="current-date"></span>
                         </div>
+                    </div>
+                    <div class="bill-meta">
+                        <div class="bill-title">ESTIMATE BILL</div>
                     </div>
                 </div>
             </div>
@@ -71,17 +119,17 @@
                         <th class="col-size">Size/Meas.</th>
                         <th class="col-qty">Qty</th>
                         <th class="col-sqft">Sq.ft</th>
-                        <th class="col-rate">Rate</th>
-                        <th class="col-amt">Amount</th>
+                        <th class="col-rate">Rate (₹)</th>
+                        <th class="col-amt">Amount (₹)</th>
                         <th class="col-act no-print">Action</th>
                     </tr>
                 </thead>
                 <tbody id="bill-body">
-                    <!-- Rows will be injected here by JS -->
+                    <!-- Rows injected by JS -->
                 </tbody>
                 <tfoot class="no-print">
                     <tr>
-                        <td colspan="8" style="padding: 10px 0; border: none; text-align: center;">
+                        <td colspan="8" style="padding: 15px 0; border: none; text-align: center;">
                             <button onclick="addRow()" class="add-row-btn">+ Add Product Row</button>
                         </td>
                     </tr>
@@ -101,24 +149,44 @@
             <div class="calc-area">
                 <div class="summary-table">
                     <div class="sum-row">
-                        <span class="label">Sub Total (₹):</span>
-                        <span class="value" id="sub-total">0.00</span>
+                        <span class="label">Sub Total:</span>
+                        <span class="value">₹ <span id="sub-total">0.00</span></span>
                     </div>
+                    
+                    <div id="gst-rows" style="display: none;">
+                        <div class="sum-row" id="sgst-row">
+                            <span class="label">SGST (<span id="sgst-percent">9</span>%):</span>
+                            <span class="value">₹ <span id="sgst-amount">0.00</span></span>
+                        </div>
+                        <div class="sum-row" id="cgst-row">
+                            <span class="label">CGST (<span id="cgst-percent">9</span>%):</span>
+                            <span class="value">₹ <span id="cgst-amount">0.00</span></span>
+                        </div>
+                        <div class="sum-row" id="igst-row" style="display: none;">
+                            <span class="label">IGST (<span id="igst-percent">18</span>%):</span>
+                            <span class="value">₹ <span id="igst-amount">0.00</span></span>
+                        </div>
+                    </div>
+
                     <div class="sum-row">
-                        <span class="label">Discount (₹):</span>
-                        <input type="number" id="discount-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                        <span class="label">Discount:</span>
+                        <div class="val-input">
+                            ₹ <input type="number" id="discount-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                        </div>
                     </div>
                     <div class="sum-row total-highlight">
-                        <span class="label">Grand Total (₹):</span>
-                        <span class="value" id="grand-total">0.00</span>
+                        <span class="label">Grand Total:</span>
+                        <span class="value">₹ <span id="grand-total">0.00</span></span>
                     </div>
                     <div class="sum-row">
-                        <span class="label">Paid Amount (₹):</span>
-                        <input type="number" id="paid-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                        <span class="label">Paid Amount:</span>
+                        <div class="val-input">
+                            ₹ <input type="number" id="paid-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                        </div>
                     </div>
                     <div class="sum-row balance-highlight">
-                        <span class="label">Balance Amount (₹):</span>
-                        <span class="value" id="balance-amount">0.00</span>
+                        <span class="label">Balance Amount:</span>
+                        <span class="value">₹ <span id="balance-amount">0.00</span></span>
                     </div>
                 </div>
             </div>
@@ -132,6 +200,9 @@
                     <p>Customer Signature</p>
                 </div>
                 <div class="sig-box">
+                    <div id="sig-preview-container">
+                        <img id="sig-preview" src="" alt="Signature" style="display:none; max-width: 150px; max-height: 80px;">
+                    </div>
                     <div class="line"></div>
                     <p>Authorized Signature</p>
                     <small>(Bhumika Plywood)</small>
@@ -139,7 +210,7 @@
             </div>
             <div class="terms-footer">
                 <div class="terms-title">Terms & Conditions:</div>
-                <p>1. Prices are subject to market change. 2. Goods once sold will not be returned. 3. This is an estimate only.</p>
+                <p>1. Prices are subject to market change. 2. Goods once sold will not be returned. 3. This is an estimate only. 4. All disputes are subject to Parola jurisdiction.</p>
             </div>
         </footer>
     </div>
