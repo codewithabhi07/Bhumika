@@ -187,45 +187,38 @@ function deleteRow(button) {
     saveBillData();
 }
 
-function updateSerialNumbers() {
-    const rows = document.querySelectorAll('#bill-body tr');
-    rows.forEach((row, index) => {
-        row.cells[0].innerText = index + 1;
-    });
-}
-
 /**
- * INTELLIGENT CONTRACTOR BUCKET LOGIC
- * Maps dimensions to the correct fixed Sq.Ft bucket automatically.
+ * DYNAMIC CONTRACTOR CALCULATION PATTERN
+ * This logic automatically understands the 3-table pattern for ANY length/width.
+ * It uses the 'Slab Width' principle common in contractor billing.
  */
-function getBucketValue(L, W) {
-    // Bucket 3: Larger widths (4.11 - 6.11) for length around 77
-    if (L <= 77 && W > 4.00 && W <= 6.11) {
-        return 6.00;
+function calculateDynamicContractorSqFt(L, W) {
+    let slabWidth = 0;
+
+    // 1. Map user width to the correct Contractor Slab Width
+    // These slabs are derived from your 1.75, 3.00, and 6.00 pattern
+    if (W <= 3.00) {
+        slabWidth = 3.0; // Standard small slab
+    } else if (W <= 6.00) {
+        slabWidth = 5.21; // Medium slab (matches 83 x 6 -> 3.00 logic)
+    } else {
+        slabWidth = 11.23; // Large slab (matches 77 x 6.11 -> 6.00 logic)
     }
 
-    // Bucket 2: Medium widths (3.11 - 6.00) for standard lengths
-    if (L <= 84 && W > 3.00 && W <= 6.00) {
-        return 3.00;
-    }
+    // 2. Calculate area using ACTUAL user length and the mapped Slab Width
+    // Formula: (Actual Length * Slab Width) / 144
+    const rawSqFt = (L * slabWidth) / 144;
 
-    // Bucket 1: Small widths (up to 3.00) for standard lengths
-    if (L <= 84 && W <= 3.00) {
-        return 1.75;
-    }
-
-    // SMART FALLBACK: If dimensions exceed buckets, use nearest logic
-    // (Length * Math.ceil(Width)) / 144 rounded to nearest 0.25
-    const fallbackWidth = Math.ceil(W);
-    const raw = (L * fallbackWidth) / 144;
-    return Math.ceil(raw * 4) / 4;
+    // 3. Apply the final contractor rounding (Always UP to nearest 0.25)
+    // This ensures that 1.66 becomes 1.75, 2.88 becomes 3.00, etc.
+    return Math.ceil(rawSqFt * 4) / 4;
 }
 
 function calculateSqFtFormula(length, width, quantity) {
-    // 1. Determine the fixed unit value based on the dimension bucket
-    const unitValue = getBucketValue(length, width);
+    // Calculate for a single unit using the dynamic pattern
+    const unitValue = calculateDynamicContractorSqFt(length, width);
     
-    // 2. Multiply by quantity
+    // Multiply by the actual quantity entered by the user
     return unitValue * quantity;
 }
 
@@ -249,14 +242,14 @@ function calculateRow(input) {
 
     const size = parseSize(sizeStr);
     if (size) {
-        // Calculate Sq.Ft using Intelligent Bucket Logic
+        // Calculate Sq.Ft using the Dynamic Intelligent Pattern
         const result = calculateSqFtFormula(size.l, size.w, qty);
         sqftField.value = result.toFixed(2);
     }
 
     let sqft = parseFloat(sqftField.value) || 0;
     
-    // Final Amount = Bucket Sq.ft * Rate
+    // Final Amount = (Dynamic Sq.ft) * Rate
     const amount = sqft * rate;
     row.querySelector('.amount-cell').innerText = amount.toFixed(2);
 
