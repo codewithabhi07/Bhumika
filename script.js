@@ -111,7 +111,14 @@ function addRow(data = null) {
         <td><input type="number" step="0.01" class="sqft-input" placeholder="0.0" value="${data ? data.sqft : ''}" oninput="calculateRow(this)"></td>
         <td><input type="number" class="rate-input" placeholder="0.00" value="${data ? data.rate : ''}" oninput="calculateRow(this)"></td>
         <td class="col-amt amount-cell">${data ? data.amount : '0.00'}</td>
-        <td class="no-print"><button class="delete-btn" onclick="deleteRow(this)">×</button></td>
+        <td class="no-print"><button class="delete-btn" onclick="deleteRow(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        </button></td>
     `;
     tableBody.appendChild(row);
     updateSerialNumbers();
@@ -188,38 +195,28 @@ function deleteRow(button) {
 }
 
 /**
- * DYNAMIC CONTRACTOR CALCULATION PATTERN
- * This logic automatically understands the 3-table pattern for ANY length/width.
- * It uses the 'Slab Width' principle common in contractor billing.
+ * REAL-WORLD CONTRACTOR CALCULATION LOGIC
+ * This ensures consistent calculation for ANY measurement.
  */
-function calculateDynamicContractorSqFt(L, W) {
-    let slabWidth = 0;
+function calculateRealWorldSqFt(L, W, Q) {
+    // 1. Width Rounding: Always round width UP to next whole number (Ceiling)
+    // Examples: 2.5 -> 3, 3.11 -> 4, 6.11 -> 7
+    const roundedWidth = Math.ceil(W);
 
-    // 1. Map user width to the correct Contractor Slab Width
-    // These slabs are derived from your 1.75, 3.00, and 6.00 pattern
-    if (W <= 3.00) {
-        slabWidth = 3.0; // Standard small slab
-    } else if (W <= 6.00) {
-        slabWidth = 5.21; // Medium slab (matches 83 x 6 -> 3.00 logic)
-    } else {
-        slabWidth = 11.23; // Large slab (matches 77 x 6.11 -> 6.00 logic)
-    }
+    // 2. Base Calculation
+    // Formula: (Length * RoundedWidth * Quantity) / 144
+    const rawSqFt = (L * roundedWidth * Q) / 144;
 
-    // 2. Calculate area using ACTUAL user length and the mapped Slab Width
-    // Formula: (Actual Length * Slab Width) / 144
-    const rawSqFt = (L * slabWidth) / 144;
+    // 3. Final Result Rounding: Always round UP to nearest 0.25 step
+    // Logic: Math.ceil(value * 4) / 4
+    // We use a tiny epsilon (0.0001) to handle floating point precision
+    const finalSqFt = Math.ceil((rawSqFt - 0.0001) * 4) / 4;
 
-    // 3. Apply the final contractor rounding (Always UP to nearest 0.25)
-    // This ensures that 1.66 becomes 1.75, 2.88 becomes 3.00, etc.
-    return Math.ceil(rawSqFt * 4) / 4;
+    return finalSqFt;
 }
 
 function calculateSqFtFormula(length, width, quantity) {
-    // Calculate for a single unit using the dynamic pattern
-    const unitValue = calculateDynamicContractorSqFt(length, width);
-    
-    // Multiply by the actual quantity entered by the user
-    return unitValue * quantity;
+    return calculateRealWorldSqFt(length, width, quantity);
 }
 
 function parseSize(sizeStr) {
@@ -242,14 +239,14 @@ function calculateRow(input) {
 
     const size = parseSize(sizeStr);
     if (size) {
-        // Calculate Sq.Ft using the Dynamic Intelligent Pattern
+        // Apply the updated consistent logic
         const result = calculateSqFtFormula(size.l, size.w, qty);
         sqftField.value = result.toFixed(2);
     }
 
     let sqft = parseFloat(sqftField.value) || 0;
     
-    // Final Amount = (Dynamic Sq.ft) * Rate
+    // Final Amount = Calculated Sq.ft * Rate
     const amount = sqft * rate;
     row.querySelector('.amount-cell').innerText = amount.toFixed(2);
 
