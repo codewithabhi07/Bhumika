@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bhumika Plywood Estimate</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Screen Controls -->
+    <div class="container-controls no-print">
+        <div class="control-group">
+            <button onclick="window.print()" class="print-btn">Print Estimate</button>
+            <button onclick="clearBill()" class="clear-btn">Clear Bill</button>
+        </div>
+    </div>
+
+    <!-- Main Invoice Area -->
+    <div id="invoice-bill" class="invoice-container">
+        <!-- Watermark -->
+        <div class="watermark">Bhumika Plywood</div>
+        
+        <!-- Header -->
+        <header>
+            <div class="header-main">
+                <div class="business-brand">
+                    <h1>Bhumika Plywood & Building Material</h1>
+                    <div class="location-tag">Location: Parola</div>
+                    <div class="contact-details">
+                        <span>Phone: <strong>9420665955</strong></span> | 
+                        <span>Manager: <strong>Rohit Chavan</strong></span>
+                    </div>
+                </div>
+                <div class="bill-meta">
+                    <div class="bill-title">ESTIMATE BILL</div>
+                    <div class="meta-info">
+                        <div class="meta-item">
+                            <span class="label">Est No:</span>
+                            <span class="value" id="est-number"></span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="label">Date:</span>
+                            <span class="value" id="current-date"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Customer Section -->
+        <section class="customer-info">
+            <div class="info-grid">
+                <div class="input-field">
+                    <label>Customer Name:</label>
+                    <input type="text" id="customer-name" placeholder="Enter full name">
+                </div>
+                <div class="input-field">
+                    <label>Mobile Number:</label>
+                    <input type="text" id="mobile-number" placeholder="Enter 10-digit number">
+                </div>
+            </div>
+        </section>
+
+        <!-- Table Section -->
+        <div class="table-wrapper">
+            <table id="bill-table">
+                <thead>
+                    <tr>
+                        <th class="col-sno">S.No</th>
+                        <th class="col-item">Product Name</th>
+                        <th class="col-size">Size/Meas.</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-sqft">Sq.ft</th>
+                        <th class="col-rate">Rate</th>
+                        <th class="col-amt">Amount</th>
+                        <th class="col-act no-print">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="bill-body">
+                    <!-- Rows will be injected here by JS -->
+                </tbody>
+                <tfoot class="no-print">
+                    <tr>
+                        <td colspan="8" style="padding: 10px 0; border: none; text-align: center;">
+                            <button onclick="addRow()" class="add-row-btn">+ Add Product Row</button>
+                        </td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <!-- Totaling & Words Section -->
+        <section class="billing-summary">
+            <div class="words-area">
+                <div class="amount-words-box">
+                    <span class="label">Total Amount in Words:</span>
+                    <p id="amount-words">Zero Rupees Only</p>
+                </div>
+            </div>
+            
+            <div class="calc-area">
+                <div class="summary-table">
+                    <div class="sum-row">
+                        <span class="label">Sub Total (₹):</span>
+                        <span class="value" id="sub-total">0.00</span>
+                    </div>
+                    <div class="sum-row">
+                        <span class="label">Discount (₹):</span>
+                        <input type="number" id="discount-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                    </div>
+                    <div class="sum-row total-highlight">
+                        <span class="label">Grand Total (₹):</span>
+                        <span class="value" id="grand-total">0.00</span>
+                    </div>
+                    <div class="sum-row">
+                        <span class="label">Paid Amount (₹):</span>
+                        <input type="number" id="paid-amount" value="0" class="sum-input" oninput="calculateGrandTotal()">
+                    </div>
+                    <div class="sum-row balance-highlight">
+                        <span class="label">Balance Amount (₹):</span>
+                        <span class="value" id="balance-amount">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Signature & Footer -->
+        <footer>
+            <div class="signature-block">
+                <div class="sig-box">
+                    <div class="line"></div>
+                    <p>Customer Signature</p>
+                </div>
+                <div class="sig-box">
+                    <div class="line"></div>
+                    <p>Authorized Signature</p>
+                    <small>(Bhumika Plywood)</small>
+                </div>
+            </div>
+            <div class="terms-footer">
+                <div class="terms-title">Terms & Conditions:</div>
+                <p>1. Prices are subject to market change. 2. Goods once sold will not be returned. 3. This is an estimate only.</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script Import -->
+    <script src="script.js"></script>
+</body>
+</html>
