@@ -195,28 +195,32 @@ function deleteRow(button) {
 }
 
 /**
- * REAL-WORLD CONTRACTOR CALCULATION LOGIC
- * This ensures consistent calculation for ANY measurement.
+ * INTELLIGENT '3-TABLE' CONTRACTOR LOGIC
+ * Automatically handles the plywood shop pattern:
+ * 1. Width is always rounded UP to the nearest multiple of 3 (3, 6, 9, 12, etc.)
+ *    Example: 32" becomes 33", 1.11" becomes 3", 4.11" becomes 6".
+ * 2. Final result is rounded UP to the nearest 0.25 step.
  */
-function calculateRealWorldSqFt(L, W, Q) {
-    // 1. Width Rounding: Always round width UP to next whole number (Ceiling)
-    // Examples: 2.5 -> 3, 3.11 -> 4, 6.11 -> 7
-    const roundedWidth = Math.ceil(W);
+function calculateThreeTableSqFt(L, W, Q) {
+    // 1. Width Slab Logic (The '3 Table' Rule)
+    // Round width up to the nearest multiple of 3
+    // This satisfies your rule: 48x32 -> 48x33
+    const slabWidth = Math.ceil(W / 3) * 3;
 
-    // 2. Base Calculation
-    // Formula: (Length * RoundedWidth * Quantity) / 144
-    const rawSqFt = (L * roundedWidth * Q) / 144;
+    // 2. Base Area Calculation
+    // Formula: (Length * SlabWidth * Quantity) / 144
+    const rawSqFt = (L * slabWidth * Q) / 144;
 
-    // 3. Final Result Rounding: Always round UP to nearest 0.25 step
-    // Logic: Math.ceil(value * 4) / 4
-    // We use a tiny epsilon (0.0001) to handle floating point precision
+    // 3. Contractor Precision Rounding
+    // Always round UP to the nearest 0.25 step
+    // Epsilon (0.0001) handles floating point errors
     const finalSqFt = Math.ceil((rawSqFt - 0.0001) * 4) / 4;
 
     return finalSqFt;
 }
 
 function calculateSqFtFormula(length, width, quantity) {
-    return calculateRealWorldSqFt(length, width, quantity);
+    return calculateThreeTableSqFt(length, width, quantity);
 }
 
 function parseSize(sizeStr) {
@@ -239,13 +243,13 @@ function calculateRow(input) {
 
     const size = parseSize(sizeStr);
     if (size) {
-        // Apply the updated consistent logic
+        // Apply the '3-Table' Contractor Pattern
         const result = calculateSqFtFormula(size.l, size.w, qty);
         sqftField.value = result.toFixed(2);
     }
 
     let sqft = parseFloat(sqftField.value) || 0;
-    
+
     // Final Amount = Calculated Sq.ft * Rate
     const amount = sqft * rate;
     row.querySelector('.amount-cell').innerText = amount.toFixed(2);
