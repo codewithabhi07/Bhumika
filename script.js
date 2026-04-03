@@ -202,26 +202,24 @@ function roundSqFt(value) {
 
     if (decimalPart === 0) {
         return integerPart;
-    } else if (decimalPart >= 0.01 && decimalPart <= 0.24) {
+    } else if (decimalPart > 0 && decimalPart <= 0.25) {
         return integerPart + 0.25;
-    } else if (decimalPart === 0.25) {
-        return integerPart + 0.25;
-    } else if (decimalPart >= 0.26 && decimalPart <= 0.49) {
+    } else if (decimalPart > 0.25 && decimalPart <= 0.50) {
         return integerPart + 0.50;
-    } else if (decimalPart === 0.50) {
-        return integerPart + 0.50;
-    } else if (decimalPart >= 0.51 && decimalPart <= 0.74) {
-        return integerPart + 0.75;
-    } else if (decimalPart === 0.75) {
+    } else if (decimalPart > 0.50 && decimalPart <= 0.75) {
         return integerPart + 0.75;
     } else {
-        // Covers 0.76 to 0.99
         return integerPart + 1.00;
     }
 }
 
 function calculateSqFtFormula(length, width, quantity) {
-    const rawSqFt = (length * width * quantity) / 144;
+    // Rule: If width is decimal, round it UP to next whole number
+    const effectiveWidth = Math.ceil(width);
+    
+    // Formula: (Length * RoundedWidth * Quantity) / 144
+    const rawSqFt = (length * effectiveWidth * quantity) / 144;
+    
     return roundSqFt(rawSqFt);
 }
 
