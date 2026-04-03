@@ -194,33 +194,39 @@ function updateSerialNumbers() {
     });
 }
 
-function roundSqFt(value) {
-    if (!value || isNaN(value)) return 0;
-    
-    let integerPart = Math.floor(value);
-    let decimalPart = Math.round((value - integerPart) * 100) / 100;
-
-    if (decimalPart === 0) {
-        return integerPart;
-    } else if (decimalPart > 0 && decimalPart <= 0.25) {
-        return integerPart + 0.25;
-    } else if (decimalPart > 0.25 && decimalPart <= 0.50) {
-        return integerPart + 0.50;
-    } else if (decimalPart > 0.50 && decimalPart <= 0.75) {
-        return integerPart + 0.75;
-    } else {
-        return integerPart + 1.00;
+/**
+ * INTELLIGENT CONTRACTOR BUCKET LOGIC
+ * Maps dimensions to the correct fixed Sq.Ft bucket automatically.
+ */
+function getBucketValue(L, W) {
+    // Bucket 3: Larger widths (4.11 - 6.11) for length around 77
+    if (L <= 77 && W > 4.00 && W <= 6.11) {
+        return 6.00;
     }
+
+    // Bucket 2: Medium widths (3.11 - 6.00) for standard lengths
+    if (L <= 84 && W > 3.00 && W <= 6.00) {
+        return 3.00;
+    }
+
+    // Bucket 1: Small widths (up to 3.00) for standard lengths
+    if (L <= 84 && W <= 3.00) {
+        return 1.75;
+    }
+
+    // SMART FALLBACK: If dimensions exceed buckets, use nearest logic
+    // (Length * Math.ceil(Width)) / 144 rounded to nearest 0.25
+    const fallbackWidth = Math.ceil(W);
+    const raw = (L * fallbackWidth) / 144;
+    return Math.ceil(raw * 4) / 4;
 }
 
 function calculateSqFtFormula(length, width, quantity) {
-    // Rule: If width is decimal, round it UP to next whole number
-    const effectiveWidth = Math.ceil(width);
+    // 1. Determine the fixed unit value based on the dimension bucket
+    const unitValue = getBucketValue(length, width);
     
-    // Formula: (Length * RoundedWidth * Quantity) / 144
-    const rawSqFt = (length * effectiveWidth * quantity) / 144;
-    
-    return roundSqFt(rawSqFt);
+    // 2. Multiply by quantity
+    return unitValue * quantity;
 }
 
 function parseSize(sizeStr) {
@@ -243,13 +249,14 @@ function calculateRow(input) {
 
     const size = parseSize(sizeStr);
     if (size) {
-        const roundedTotalSqFt = calculateSqFtFormula(size.l, size.w, qty);
-        sqftField.value = roundedTotalSqFt.toFixed(2);
+        // Calculate Sq.Ft using Intelligent Bucket Logic
+        const result = calculateSqFtFormula(size.l, size.w, qty);
+        sqftField.value = result.toFixed(2);
     }
 
     let sqft = parseFloat(sqftField.value) || 0;
-    sqft = roundSqFt(sqft);
-
+    
+    // Final Amount = Bucket Sq.ft * Rate
     const amount = sqft * rate;
     row.querySelector('.amount-cell').innerText = amount.toFixed(2);
 
